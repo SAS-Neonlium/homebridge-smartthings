@@ -22,8 +22,8 @@ This is a fork for the homebridge-smartthings plugin created by [@iklein99](http
 ### 1. Set up your server
 
 Start ngrok or similar tool to create a secure tunnel to your local server. Note that the free version of ngrok will
-change the subdomain part of the URL every time you restart it, so you will need to update the server URL in the `.env`. 
-Alternately, you can use the paid version which supports reserved subdomains:
+change the subdomain part of the URL every time you restart it. 
+Alternately, you can use the paid version which supports reserved subdomains, or any other tool such as cloudflare zero trust tunnels which has a free tier:
 ```
 ngrok http 3000
 ```
