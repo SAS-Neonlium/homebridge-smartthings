@@ -93,9 +93,9 @@ won't be able to see those values again.
 
 ### 3. install the plugin
 
-Start by installing the plugin:
+Use your favorite terminal to install the plugin, go inside the project folder and run the following command, Starting by installing the plugin:
 ```
-npm install -g homebridge-smartthings
+npm install -g
 ```
 once installed, you can build the plugin:
 ```
