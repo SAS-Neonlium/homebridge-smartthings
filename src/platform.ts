@@ -54,7 +54,7 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
       this.log,
       this,
       this.api.user.storagePath(),
-      webhookServer
+      webhookServer,
     );
 
     // Update axios instance with token refresh interceptor
