@@ -29,7 +29,7 @@ ngrok http 3000
 ```
 ### 2. Register your SmartThings app
 
-Look at the log output of your local server or Glitch app. You should see something like this:
+Look at the log output of your local server, You should see something like this:
 ```
 Target URL -- Copy this value into the targetUrl field of you app creation request:
 https://315e5367357f.ngrok.app
@@ -41,7 +41,7 @@ Website URL -- Visit this URL in your browser to log into SmartThings and connec
 https://315e5367357f.ngrok.app
 ```
 
-Run the `smartthings apps:create` command to create a new app. You will be prompted for the required
+After Installaing the SmartThings CLI, Run the `smartthings apps:create` command to create a new smartthingsAPI app. You will be prompted for the required
 information. The following is an example of the output from the command:
 
 ```bash
@@ -107,8 +107,8 @@ npm link homebridge-smartthings@1.5.22
 ```
 
 ### 4. Configure the plugin
-after installing the plugin, you can configure the plugin from homebridge ui, you need the target url from step 1, and you need to add the client id and secret from the app you created in step 2.
+After installing the plugin, you can configure the plugin from homebridge ui, you need the target url from step 1, and you need to add the client id and secret from the app you created in step 2.
 
 ### 5. Authorize the plugin
-once you have configured the plugin, you can authorize the plugin by clicking the authorize link found in the plugin log, after authorization proceed to restart homebridge.
+Once you have configured the plugin, you can authorize the plugin by clicking the authorize link found in the plugin log, after authorization proceed to restart homebridge.
 
