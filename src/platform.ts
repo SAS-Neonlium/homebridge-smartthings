@@ -54,7 +54,7 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
       this.log,
       this,
       this.api.user.storagePath(),
-      webhookServer
+      webhookServer,
     );
 
     // Update axios instance with token refresh interceptor
@@ -82,7 +82,6 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
           try {
             // Attempt to refresh the token
             await this.auth.refreshTokens();
-            
             // Update the Authorization header with the new token
             const newToken = this.auth.getAccessToken();
             if (newToken) {
@@ -90,7 +89,6 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
                 originalRequest.headers = {};
               }
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              
               // Retry the original request with the new token
               return this.axInstance(originalRequest);
             }
@@ -103,7 +101,7 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
         }
 
         return Promise.reject(error);
-      }
+      },
     );
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
