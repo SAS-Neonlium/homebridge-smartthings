@@ -29,7 +29,7 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
     'Authorization': 'Bearer: ' + this.config.AccessToken,
   };
 
-  private axInstance = axios.default.create({
+  public readonly axInstance = axios.default.create({
     baseURL: this.config.BaseURL,
     headers: this.headerDict,
   });
@@ -54,7 +54,7 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
       this.log,
       this,
       this.api.user.storagePath(),
-      webhookServer,
+      webhookServer
     );
 
     // Update axios instance with token refresh interceptor
@@ -68,6 +68,43 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
       }
       return config;
     });
+
+    // Add response interceptor to handle 401 errors
+    this.axInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        // If the error is 401 and we haven't tried to refresh the token yet
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            // Attempt to refresh the token
+            await this.auth.refreshTokens();
+            
+            // Update the Authorization header with the new token
+            const newToken = this.auth.getAccessToken();
+            if (newToken) {
+              if (!originalRequest.headers) {
+                originalRequest.headers = {};
+              }
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              
+              // Retry the original request with the new token
+              return this.axInstance(originalRequest);
+            }
+          } catch (refreshError) {
+            this.log.error('Token refresh failed:', refreshError);
+            // Start new auth flow if refresh fails
+            this.auth.startAuthFlow();
+            return Promise.reject(refreshError);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,

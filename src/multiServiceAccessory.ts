@@ -169,9 +169,7 @@ export class MultiServiceAccessory {
   constructor(
     platform: IKHomeBridgeHomebridgePlatform,
     accessory: PlatformAccessory,
-    // capabilities,
   ) {
-
     this.accessory = accessory;
     this.platform = platform;
     this.name = accessory.context.device.label;
@@ -179,12 +177,6 @@ export class MultiServiceAccessory {
     this.baseURL = platform.config.BaseURL;
     this.key = platform.config.AccessToken;
     this.api = platform.api;
-    const headerDict = { 'Authorization': 'Bearer: ' + this.key };
-
-    this.axInstance = axios.default.create({
-      baseURL: this.baseURL,
-      headers: headerDict,
-    });
 
     this.commandURL = 'devices/' + accessory.context.device.deviceId + '/commands';
     this.statusURL = 'devices/' + accessory.context.device.deviceId + '/status';
@@ -197,15 +189,26 @@ export class MultiServiceAccessory {
       .setCharacteristic(platform.Characteristic.Model, 'Default-Model')
       .setCharacteristic(platform.Characteristic.SerialNumber, 'Default-Serial');
 
-    // // Find out if we are online
-    this.axInstance.get(this.healthURL)
-      .then(res => {
-        if (res.data.state === 'ONLINE') {
-          this.online = true;
-        } else {
-          this.online = false;
-        }
-      });
+    // Use platform's axios instance to benefit from token refresh handling
+    this.axInstance = platform.axInstance;
+
+    // Initialize device health check
+    this.checkDeviceHealth().catch(error => {
+      this.log.error(`Error checking device health for ${this.name}:`, error);
+      this.online = false;
+    });
+  }
+
+  private async checkDeviceHealth(): Promise<void> {
+    try {
+      const response = await this.axInstance.get(this.healthURL);
+      this.online = response.data.state === 'ONLINE';
+      this.log.debug(`Device ${this.name} is ${this.online ? 'online' : 'offline'}`);
+    } catch (error) {
+      this.log.error(`Failed to check device health for ${this.name}:`, error);
+      this.online = false;
+      throw error; // Re-throw to be caught by the constructor
+    }
   }
 
   private registerServiceIfMatchesCapabilities(

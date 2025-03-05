@@ -82,6 +82,9 @@ export class SmartThingsAuth {
         throw new Error('No refresh token available');
       }
 
+      const { accessTokenExpiresIn, refreshTokenExpiresIn } = this.tokenManager.getTokenExpiryInfo();
+      this.log.debug(`Refreshing tokens - Access token expires in ${Math.floor(accessTokenExpiresIn / 1000)}s, Refresh token expires in ${Math.floor(refreshTokenExpiresIn / (1000 * 60 * 60))}h`);
+
       // Create Basic Auth header from client credentials
       const basicAuth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
@@ -98,10 +101,17 @@ export class SmartThingsAuth {
 
       await this.tokenManager.updateTokens(response.data);
       
-      this.log.debug('Successfully refreshed tokens');
+      const { accessTokenExpiresIn: newAccessExpiry } = this.tokenManager.getTokenExpiryInfo();
+      this.log.info(`Successfully refreshed tokens - New access token expires in ${Math.floor(newAccessExpiry / 1000)}s`);
     } catch (error) {
       this.log.error('Error refreshing tokens:', error);
-      this.startAuthFlow();
+      if (this.tokenManager.isRefreshTokenValid()) {
+        this.log.warn('Refresh token is still valid, will retry refresh later');
+      } else {
+        this.log.warn('Refresh token is invalid, starting new auth flow');
+        this.startAuthFlow();
+      }
+      throw error;
     }
   }
 

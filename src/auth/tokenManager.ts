@@ -17,6 +17,8 @@ export class TokenManager {
   private tokenPath: string;
   private tokenData: TokenData | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
+  private readonly REFRESH_BEFORE_EXPIRY = 5 * 60 * 1000; // Refresh 5 minutes before expiry
+  private readonly REFRESH_CHECK_INTERVAL = 60 * 1000; // Check every minute
 
   constructor(
     private readonly platform: IKHomeBridgeHomebridgePlatform,
@@ -25,6 +27,46 @@ export class TokenManager {
   ) {
     this.tokenPath = path.join(storagePath, 'smartthings_tokens.json');
     this.loadTokens();
+    this.startRefreshMonitor();
+  }
+
+  private startRefreshMonitor(): void {
+    // Clear any existing timer
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+    }
+
+    // Start a periodic check for token refresh
+    this.refreshTimer = setInterval(() => {
+      this.checkAndRefreshTokens();
+    }, this.REFRESH_CHECK_INTERVAL);
+  }
+
+  private async checkAndRefreshTokens(): Promise<void> {
+    if (!this.tokenData) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeUntilExpiry = this.tokenData.expires_at - now;
+    const timeUntilRefreshExpiry = this.tokenData.refresh_token_expires_at - now;
+
+    // If refresh token is about to expire, start new auth flow
+    if (timeUntilRefreshExpiry <= this.REFRESH_BEFORE_EXPIRY) {
+      this.log.warn('Refresh token is about to expire, starting new auth flow');
+      this.platform.auth.startAuthFlow();
+      return;
+    }
+
+    // If access token is about to expire, refresh it
+    if (timeUntilExpiry <= this.REFRESH_BEFORE_EXPIRY) {
+      this.log.debug('Access token is about to expire, refreshing tokens');
+      try {
+        await this.platform.auth.refreshTokens();
+      } catch (error) {
+        this.log.error('Failed to refresh tokens:', error);
+      }
+    }
   }
 
   private loadTokens(): void {
@@ -33,6 +75,9 @@ export class TokenManager {
         const data = fs.readFileSync(this.tokenPath, 'utf8');
         this.tokenData = JSON.parse(data);
         this.log.debug('Loaded existing tokens from storage');
+
+        // Immediately check if tokens need refresh after loading
+        this.checkAndRefreshTokens();
       }
     } catch (error) {
       this.log.error('Error loading tokens:', error);
@@ -82,7 +127,6 @@ export class TokenManager {
     }
 
     this.saveTokens();
-    this.scheduleTokenRefresh();
   }
 
   public getAccessToken(): string | null {
@@ -95,29 +139,12 @@ export class TokenManager {
 
   public isTokenValid(): boolean {
     if (!this.tokenData) return false;
-    return Date.now() < this.tokenData.expires_at;
+    return Date.now() < (this.tokenData.expires_at - this.REFRESH_BEFORE_EXPIRY);
   }
 
   public isRefreshTokenValid(): boolean {
     if (!this.tokenData) return false;
-    return Date.now() < this.tokenData.refresh_token_expires_at;
-  }
-
-  private scheduleTokenRefresh(): void {
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-    }
-
-    if (!this.tokenData || !this.tokenData.expires_at) {
-      return;
-    }
-
-    const timeUntilExpiry = this.tokenData.expires_at - Date.now();
-    const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 0); // Refresh 5 minutes before expiry
-
-    this.refreshTimer = setTimeout(() => {
-      this.platform.auth.refreshTokens();
-    }, refreshTime);
+    return Date.now() < (this.tokenData.refresh_token_expires_at - this.REFRESH_BEFORE_EXPIRY);
   }
 
   public clearTokens(): void {
@@ -126,7 +153,19 @@ export class TokenManager {
       fs.unlinkSync(this.tokenPath);
     }
     if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
+      clearInterval(this.refreshTimer);
     }
+  }
+
+  public getTokenExpiryInfo(): { accessTokenExpiresIn: number; refreshTokenExpiresIn: number } {
+    if (!this.tokenData) {
+      return { accessTokenExpiresIn: 0, refreshTokenExpiresIn: 0 };
+    }
+
+    const now = Date.now();
+    return {
+      accessTokenExpiresIn: Math.max(0, this.tokenData.expires_at - now),
+      refreshTokenExpiresIn: Math.max(0, this.tokenData.refresh_token_expires_at - now),
+    };
   }
 } 
