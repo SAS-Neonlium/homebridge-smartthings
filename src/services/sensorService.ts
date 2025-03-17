@@ -63,7 +63,7 @@ export abstract class SensorService extends BaseService {
               this.log.error(`Bad status from ${this.name}.  Removing this service.`);
               // Stop polling and remove service
               if (this.pollingTimer) {
-                clearInterval(this.pollingTimer);
+                clearInterval(this.pollingTimer as NodeJS.Timeout);
               }
               this.accessory.removeService(this.service);
             } else {
