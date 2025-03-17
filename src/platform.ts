@@ -1,5 +1,5 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-import { AxiosRequestConfig } from 'axios';
+import {AxiosHeaders, InternalAxiosRequestConfig} from 'axios';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import axios = require('axios');
@@ -58,11 +58,11 @@ export class IKHomeBridgeHomebridgePlatform implements DynamicPlatformPlugin {
     );
 
     // Update axios instance with token refresh interceptor
-    this.axInstance.interceptors.request.use(async (config: AxiosRequestConfig) => {
+    this.axInstance.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
       const token = this.auth.getAccessToken();
       if (token) {
         if (!config.headers) {
-          config.headers = {};
+          config.headers = new AxiosHeaders();
         }
         config.headers.Authorization = `Bearer ${token}`;
       }
